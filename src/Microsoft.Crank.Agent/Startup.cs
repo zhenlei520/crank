@@ -4101,7 +4101,9 @@ namespace Microsoft.Crank.Agent
                     _startPerfviewArguments += $" /{customArg.Key}{value}";
                 }
 
-                RunPerfview($"start /AcceptEula /NoGui {_startPerfviewArguments} \"{Path.Combine(job.BasePath, "benchmarks.trace")}\"", workingDirectory);
+                var focusProcessId = job.ChildProcessId != 0 ? job.ChildProcessId : job.ProcessId;
+
+                RunPerfview($"start /AcceptEula /NoGui /focusProcess={focusProcessId} {_startPerfviewArguments} \"{Path.Combine(job.BasePath, "benchmarks.trace")}\"", workingDirectory);
                 Log.WriteLine($"Starting PerfView {_startPerfviewArguments}");
             }
             else
