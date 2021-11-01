@@ -24,14 +24,12 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
     class Program
     {
         private static readonly HttpClient _httpClient;
-        private static readonly HttpClientHandler _httpClientHandler;
         private static ScriptConsole _scriptConsole = new ScriptConsole();
 
         private static readonly object _synLock = new object();
 
         private static HttpMessageInvoker _httpMessageInvoker;
         private static SocketsHttpHandler _httpHandler;
-
         private static bool _running;
         private static bool _measuring;
         private static List<Worker> _workers = new List<Worker>();
@@ -52,16 +50,17 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
         public static Timeline[] Timelines {  get; set; }
         public static string Script { get; set; }  
         public static bool NoHarDelay {  get; set; }
+        public static bool ResetConnection { get; set; }
 
 
         static Program()
         {
             // Configuring the http client to trust the self-signed certificate
-            _httpClientHandler = new HttpClientHandler();
-            _httpClientHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-            _httpClientHandler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+            var httpClientHandler = new HttpClientHandler();
+            httpClientHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            httpClientHandler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
 
-            _httpClient = new HttpClient(_httpClientHandler);
+            _httpClient = new HttpClient(httpClientHandler);
         }
 
         static async Task Main(string[] args)
@@ -79,11 +78,12 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
             var optionCertPwd = app.Option("-p|--certpwd <password>", "The password for the cert pfx file.", CommandOptionType.SingleValue);
             var optionFormat = app.Option("-f|--format <format>", "The format of the output, e.g., text, json. Default is text.", CommandOptionType.SingleValue);
             var optionQuiet = app.Option("-q|--quiet", "When set, nothing is rendered on stsdout but the results.", CommandOptionType.NoValue);
-            var optionCookies = app.Option("-c|--cookies", "When set, cookies are ignored.", CommandOptionType.NoValue);
+            var optionCookies = app.Option("-k|--cookies", "When set, cookies are ignored.", CommandOptionType.NoValue);
             var optionHar = app.Option("-h|--har <filename>", "A .har file representing the urls to request.", CommandOptionType.SingleValue);
             var optionHarNoDelay = app.Option("--har-no-delay", "when set, delays between HAR requests are not followed.", CommandOptionType.NoValue);
             var optionScript = app.Option("-s|--script <filename>", "A .js script file altering the current client.", CommandOptionType.SingleValue);
             var optionLocal = app.Option("-l|--local", "Ignore requests outside of the main domain.", CommandOptionType.NoValue);
+            var optionReset = app.Option("-r|--reset", "Reset connection after each request.", CommandOptionType.NoValue);
 
             app.OnValidate(ctx =>
             {
@@ -104,6 +104,8 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
                 Quiet = optionQuiet.HasValue();
 
                 Local = optionLocal.HasValue();
+
+                ResetConnection = optionReset.HasValue();
 
                 Log("Http Client");
 
@@ -201,14 +203,8 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
                     if (CertPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                     {
                         Log($"Downloading certificate: {CertPath}");
-                        var httpClientHandler = new HttpClientHandler
-                        {
-                            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-                            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-                        };
-
-                        var httpClient = new HttpClient(httpClientHandler);
-                        var bytes = await httpClient.GetByteArrayAsync(CertPath);
+                        
+                        var bytes = await _httpClient.GetByteArrayAsync(CertPath);
                         Certificate = new X509Certificate2(bytes, CertPassword);
                     }
                     else
@@ -429,9 +425,15 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
                             Log($"No cert specified.");
                         }
 
+                        if (ResetConnection)
+                        {
+                            _httpHandler.PooledConnectionLifetime = TimeSpan.Zero;
+                        }
+
                         _httpMessageInvoker = new HttpMessageInvoker(_httpHandler);
                     }
                 }
+
             }
 
             var worker = new Worker
@@ -449,6 +451,35 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
             _workers.Add(worker);
 
             return worker;
+        }
+
+        private static SocketsHttpHandler CreateHttpHandler()
+        {
+            var httpHandler = new SocketsHttpHandler
+            {
+                // There should be only as many connections as Tasks concurrently, so there is no need
+                // to limit the max connections per server 
+                // httpHandler.MaxConnectionsPerServer = Connections;
+                AllowAutoRedirect = false,
+                UseProxy = false,
+                AutomaticDecompression = DecompressionMethods.None
+            };
+
+            // Accept any SSL certificate
+            httpHandler.SslOptions.RemoteCertificateValidationCallback += (object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) => true;
+
+            if (Certificate != null)
+            {
+                httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection
+                {
+                    Certificate
+                };
+            }
+            else
+            {
+            }
+
+            return httpHandler;
         }
 
         public static async Task<WorkerResult> DoWorkAsync()
@@ -490,8 +521,10 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
                 foreach (var header in Headers)
                 {
                     var headerNameValue = header.Split(" ", 2, StringSplitOptions.RemoveEmptyEntries);
-                    requestMessage.Headers.Remove(headerNameValue[0]);
-                    requestMessage.Headers.TryAddWithoutValidation(headerNameValue[0], headerNameValue[1]);
+                    var headerName = headerNameValue[0].TrimEnd(':');
+                    var headerValue = headerNameValue[1];
+                    requestMessage.Headers.Remove(headerName);
+                    requestMessage.Headers.TryAddWithoutValidation(headerName, headerValue);
                 }
 
                 var uri = timeline.Uri;
@@ -558,7 +591,7 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
                         }
                     }
 
-                    using var responseMessage = await _httpMessageInvoker.SendAsync(requestMessage, CancellationToken.None);
+                    using var responseMessage = await worker.Invoker.SendAsync(requestMessage, CancellationToken.None);
 
                     if (!String.IsNullOrWhiteSpace(Script) && !worker.Script.GetValue("response").IsUndefined())
                     {
