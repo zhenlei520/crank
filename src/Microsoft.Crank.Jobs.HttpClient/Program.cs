@@ -26,10 +26,6 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
         private static readonly HttpClient _httpClient;
         private static ScriptConsole _scriptConsole = new ScriptConsole();
 
-        private static readonly object _synLock = new object();
-
-        private static HttpMessageInvoker _httpMessageInvoker;
-        private static SocketsHttpHandler _httpHandler;
         private static bool _running;
         private static bool _measuring;
         private static List<Worker> _workers = new List<Worker>();
@@ -393,53 +389,13 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
 
         private static Worker CreateWorker()
         {
-            if (_httpMessageInvoker == null)
-            {
-                lock (_synLock)
-                {
-                    if (_httpMessageInvoker == null)
-                    {
-                        _httpHandler = new SocketsHttpHandler
-                        {
-                            // There should be only as many connections as Tasks concurrently, so there is no need
-                            // to limit the max connections per server 
-                            // httpHandler.MaxConnectionsPerServer = Connections;
-                            AllowAutoRedirect = false,
-                            UseProxy = false,
-                            AutomaticDecompression = DecompressionMethods.None
-                        };
-
-                        // Accept any SSL certificate
-                        _httpHandler.SslOptions.RemoteCertificateValidationCallback += (object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) => true;
-
-                        if (Certificate != null)
-                        {
-                            Log($"Using Cert");
-                            _httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection
-                            {
-                                Certificate
-                            };
-                        }
-                        else
-                        {
-                            Log($"No cert specified.");
-                        }
-
-                        if (ResetConnection)
-                        {
-                            _httpHandler.PooledConnectionLifetime = TimeSpan.Zero;
-                        }
-
-                        _httpMessageInvoker = new HttpMessageInvoker(_httpHandler);
-                    }
-                }
-
-            }
+            var httpHandler = CreateHttpHandler();
+            var httpMessageInvoker = new HttpMessageInvoker(httpHandler);
 
             var worker = new Worker
             {
-                Handler = _httpHandler,
-                Invoker = _httpMessageInvoker,
+                Handler = httpHandler,
+                Invoker = httpMessageInvoker,
                 Script = String.IsNullOrWhiteSpace(Script) ? null : new Engine(new Options().AllowClr(typeof(HttpRequestMessage).Assembly)).Execute(Script)
             };
 
@@ -477,6 +433,11 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
             }
             else
             {
+            }
+
+            if (ResetConnection)
+            {
+                httpHandler.PooledConnectionLifetime = TimeSpan.Zero;
             }
 
             return httpHandler;
