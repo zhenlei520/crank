@@ -617,8 +617,9 @@ namespace Microsoft.Crank.Jobs.HttpClientClient
                     requestIndex++;
                 }
             }
+            var denominator = ((sw.ElapsedTicks - measuringStart) / Stopwatch.Frequency);
 
-            var throughput = sw.ElapsedTicks - measuringStart == 0 ? transferred : transferred / ((sw.ElapsedTicks - measuringStart) / Stopwatch.Frequency);
+            var throughput = denominator == 0 ? transferred : transferred / denominator;
 
             if (!String.IsNullOrWhiteSpace(Script) && !worker.Script.GetValue("stop").IsUndefined())
             {
