@@ -54,5 +54,9 @@ scenarios:
     load:
       job: bombardier
       variables:
+        connections: 1
+        warmup: 1
+        duration: 1
+        requests: 1
         serverPort: 5000
         path: /
