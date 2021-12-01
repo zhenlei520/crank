@@ -53,6 +53,8 @@ namespace Microsoft.Crank.Jobs.Bombardier
                 Console.WriteLine("Couldn't find valid -d and -n arguments (integers)");
                 return -1;
             }
+            
+            string auth = await GetAuthAsync(argsList);
 
             args = argsList.ToArray();
 
@@ -134,7 +136,7 @@ namespace Microsoft.Crank.Jobs.Bombardier
 
             args = argsList.Select(Quote).ToArray();
 
-            var baseArguments = String.Join(' ', args) + " --print r --format json";
+            var baseArguments = String.Join(' ', args).Replace("{auth}", auth) + " --print r --format json";
 
             var process = new Process()
             {
@@ -358,6 +360,77 @@ namespace Microsoft.Crank.Jobs.Bombardier
             }
 
             return s;
+        }
+
+        private static async Task<string> GetAuthAsync(List<string> argsList)
+        {
+            TryGetArgumentValue("-auth", argsList, out string AuthPath);
+
+            if (string.IsNullOrEmpty(AuthPath))
+            {
+                return "";
+            }
+
+            var httpClient = new HttpClient(_httpClientHandler);
+            TryGetArgumentValue("-af", argsList, out string AuthBodyFile);
+            TryGetArgumentValue("-am", argsList, out string AuthMethod);
+            TryGetArgumentValue("-ah", argsList, out string AuthHeader);
+
+            if (string.IsNullOrEmpty(AuthMethod))
+            {
+                AuthMethod = "GET";
+            }
+
+            string requestBody = "";
+            if (!string.IsNullOrEmpty(AuthBodyFile))
+            {
+                var ret = await new HttpClient().SendAsync(new HttpRequestMessage(HttpMethod.Get, AuthBodyFile));
+                requestBody = await ret.Content.ReadAsStringAsync();
+            }
+
+            HttpMethod method = new HttpMethod(AuthMethod);
+            HttpRequestMessage requestMessage = new HttpRequestMessage(method, AuthPath);
+            requestBody = "{}";
+            if (!string.IsNullOrEmpty(requestBody))
+            {
+                var headers = GetHeaders(AuthHeader);
+                requestMessage.Content = new StringContent(requestBody, Encoding.UTF8, headers["content-type"]);
+
+                foreach (var header in headers.Where(header => header.Key != "content-type"))
+                {
+                    requestMessage.Headers.Add(header.Key, header.Value);
+                }
+            }
+
+            var cts = new CancellationTokenSource(30000);
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            Console.Write("Measuring auth request ... ");
+
+            using (var response = await httpClient.SendAsync(requestMessage, cts.Token))
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var elapsed = stopwatch.ElapsedMilliseconds;
+
+                Console.WriteLine($"{elapsed} ms");
+
+                BenchmarksEventSource.Register("http/auth/request", Operations.Max, Operations.Max, "Auth Request (ms)", "Time to auth request in ms", "n0");
+                BenchmarksEventSource.Measure("http/auth/request", elapsed);
+
+                return content;
+            }
+
+            Dictionary<string, string> GetHeaders(string headers)
+            {
+                var dic = new Dictionary<string, string>();
+                headers.Split("  ").ToList().ForEach(item =>
+                {
+                    var header = item.Split(':');
+                    dic[header[0].ToLower()] = header[1].Trim();
+                });
+                return dic;
+            }
         }
     }
 }
