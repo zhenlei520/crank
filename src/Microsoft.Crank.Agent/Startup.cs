@@ -25,6 +25,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.WindowsServices;
 using Microsoft.Azure.Relay;
 using Microsoft.Crank.Models;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -137,7 +138,8 @@ namespace Microsoft.Crank.Agent
         private static CommandOption
             _relayConnectionStringOption,
             _relayPathOption,
-            _relayEnableHttpOption
+            _relayEnableHttpOption,
+            _runAsService
             ;
 
         static Startup()
@@ -228,6 +230,11 @@ namespace Microsoft.Crank.Agent
             var buildPathOption = app.Option("--build-path", "The path where applications are built.", CommandOptionType.SingleValue);
             var buildTimeoutOption = app.Option("--build-timeout", "Maximum duration of build task in minutes. Default 10 minutes.",
                 CommandOptionType.SingleValue);
+            _runAsService = app.Option("--service", "If specified, runs crank-agent as a service", CommandOptionType.NoValue);
+            if (_runAsService.HasValue() && OperatingSystem != OperatingSystem.Windows)
+            {
+                throw new PlatformNotSupportedException($"--service is only available on Windows");
+            }
 
             app.OnExecute(() =>
             {
@@ -351,7 +358,15 @@ namespace Microsoft.Crank.Agent
 
             var host = builder.Build();
 
-            var hostTask = host.RunAsync();
+            var hostTask = _runAsService.HasValue()
+                ? Task.Run(() =>
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        host.RunAsService();
+                    }
+                })
+                : host.RunAsync();
 
             _processJobsCts = new CancellationTokenSource();
             _processJobsTask = ProcessJobs(hostname, dockerHostname, _processJobsCts.Token);
@@ -4485,9 +4500,6 @@ namespace Microsoft.Crank.Agent
                 RunAndTrace();
             }
 
-            // Don't wait for the counters to be ready as it could get stuck and block the agent
-            var _ = StartCountersAsync(job, context);
-
             if ((job.MemoryLimitInBytes > 0 || !String.IsNullOrWhiteSpace(job.CpuSet)) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var safeProcess = Kernel32.OpenProcess(ACCESS_MASK.MAXIMUM_ALLOWED, false, (uint)process.Id);
@@ -4559,6 +4571,9 @@ namespace Microsoft.Crank.Agent
             {
                 if (MarkAsRunning(hostname, job, stopwatch))
                 {
+                    // Don't wait for the counters to be ready as it could get stuck and block the agent
+                    var _ = StartCountersAsync(job, context);
+
                     if (!job.CollectStartup)
                     {
                         if (job.Collect)
@@ -4798,10 +4813,8 @@ namespace Microsoft.Crank.Agent
 
                 try
                 {
-                    context.EventPipeSession.Dispose();
-
                     // It also interrupts the source.Process() blocking operation
-                    //await context.EventPipeSession.StopAsync(default(CancellationToken));
+                    await context.EventPipeSession.StopAsync(default);
 
                     Log.WriteLine($"Event pipe session stopped ({job.Service}:{job.Id})");
                 }
@@ -4812,6 +4825,11 @@ namespace Microsoft.Crank.Agent
                 catch (Exception e)
                 {
                     Log.WriteLine($"Event pipe session failed stopping ({job.Service}:{job.Id}): {e}");
+                }
+                finally
+                {
+                    context.EventPipeSession.Dispose();
+                    context.EventPipeSession = null;
                 }
             });
 
