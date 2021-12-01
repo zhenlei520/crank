@@ -54,6 +54,8 @@ namespace Microsoft.Crank.Jobs.Bombardier
                 return -1;
             }
 
+            string auth = await GetAuthAsync(argsList);
+
             args = argsList.ToArray();
 
             string bombardierUrl = null;
@@ -67,8 +69,8 @@ namespace Microsoft.Crank.Jobs.Bombardier
             {
                 switch (RuntimeInformation.ProcessArchitecture)
                 {
-                    case Architecture.Arm64 : bombardierUrl = "https://github.com/codesenberg/bombardier/releases/download/v1.2.5/bombardier-linux-arm64"; break;
-                    case Architecture.Arm : bombardierUrl = "https://github.com/codesenberg/bombardier/releases/download/v1.2.5/bombardier-linux-arm"; break;
+                    case Architecture.Arm64: bombardierUrl = "https://github.com/codesenberg/bombardier/releases/download/v1.2.5/bombardier-linux-arm64"; break;
+                    case Architecture.Arm: bombardierUrl = "https://github.com/codesenberg/bombardier/releases/download/v1.2.5/bombardier-linux-arm"; break;
                     default: bombardierUrl = "https://github.com/codesenberg/bombardier/releases/download/v1.2.5/bombardier-linux-amd64"; break;
                 }
             }
@@ -85,7 +87,7 @@ namespace Microsoft.Crank.Jobs.Bombardier
             var bombardierFileName = Path.Combine(Path.GetTempPath(), ".crank", bombardierVersion, Path.GetFileName(bombardierUrl));
 
             if (!File.Exists(bombardierFileName))
-            {            
+            {
                 Directory.CreateDirectory(Path.GetDirectoryName(bombardierFileName));
 
                 Console.WriteLine($"Downloading bombardier from {bombardierUrl} to {bombardierFileName}");
@@ -98,7 +100,7 @@ namespace Microsoft.Crank.Jobs.Bombardier
                     await downloadStream.FlushAsync();
                 }
             }
-            
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                 RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
@@ -134,7 +136,7 @@ namespace Microsoft.Crank.Jobs.Bombardier
 
             args = argsList.Select(Quote).ToArray();
 
-            var baseArguments = String.Join(' ', args) + " --print r --format json";
+            var baseArguments = String.Join(' ', args).Replace("{auth}", auth) + " --print r --format json";
 
             var process = new Process()
             {
@@ -170,7 +172,7 @@ namespace Microsoft.Crank.Jobs.Bombardier
                 Console.WriteLine("> bombardier " + process.StartInfo.Arguments);
 
                 await StartProcessWithRetriesAsync(process);
-                
+
                 process.WaitForExit();
 
                 if (process.ExitCode != 0)
@@ -196,7 +198,7 @@ namespace Microsoft.Crank.Jobs.Bombardier
                         : $" -d {duration}s {baseArguments}";
 
                 Console.WriteLine("> bombardier " + process.StartInfo.Arguments);
-                
+
                 await StartProcessWithRetriesAsync(process);
 
                 BenchmarksEventSource.SetChildProcessId(process.Id);
@@ -303,7 +305,7 @@ namespace Microsoft.Crank.Jobs.Bombardier
 
                 try
                 {
-                    value = (T) Convert.ChangeType(copy, typeof(T));
+                    value = (T)Convert.ChangeType(copy, typeof(T));
                     return true;
                 }
                 catch
@@ -358,6 +360,85 @@ namespace Microsoft.Crank.Jobs.Bombardier
             }
 
             return s;
+        }
+
+        private static async Task<string> GetAuthAsync(List<string> argsList)
+        {
+            TryGetArgumentValue("-auth", argsList, out string AuthPath);
+
+            if (string.IsNullOrEmpty(AuthPath))
+            {
+                return "";
+            }
+
+            var httpClient = new HttpClient(_httpClientHandler);
+            TryGetArgumentValue("-af", argsList, out string AuthBodyFile);
+            TryGetArgumentValue("-am", argsList, out string AuthMethod);
+            TryGetArgumentValue("-ah", argsList, out string AuthHeader);
+
+            if (string.IsNullOrEmpty(AuthMethod))
+            {
+                AuthMethod = "GET";
+            }
+
+            string requestBody = "";
+            if (!string.IsNullOrEmpty(AuthBodyFile))
+            {
+                var ret = await new HttpClient().SendAsync(new HttpRequestMessage(HttpMethod.Get, AuthBodyFile));
+                requestBody = await ret.Content.ReadAsStringAsync();
+            }
+
+            HttpMethod method = new HttpMethod(AuthMethod);
+            HttpRequestMessage requestMessage = new HttpRequestMessage(method, AuthPath);
+            requestBody = "{}";
+            if (!string.IsNullOrEmpty(requestBody))
+            {
+                var headers = GetHeaders(AuthHeader);
+
+                headers.TryGetValue("content-type", out string contentType);
+                requestMessage.Content = new StringContent(requestBody, Encoding.UTF8, contentType);
+
+                foreach (var header in headers.Where(header => header.Key != "content-type"))
+                {
+                    requestMessage.Headers.Add(header.Key, header.Value);
+                }
+            }
+
+            var cts = new CancellationTokenSource(30000);
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            Console.Write("Measuring auth request ... ");
+
+            using (var response = await httpClient.SendAsync(requestMessage, cts.Token))
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var elapsed = stopwatch.ElapsedMilliseconds;
+
+                Console.WriteLine($"{elapsed} ms");
+
+                BenchmarksEventSource.Register("http/auth/request", Operations.Max, Operations.Max, "Auth Request (ms)", "Time to auth request in ms", "n0");
+                BenchmarksEventSource.Measure("http/auth/request", elapsed);
+
+                return content;
+            }
+
+            Dictionary<string, string> GetHeaders(string headers)
+            {
+                var dic = new Dictionary<string, string>();
+
+                if (!string.IsNullOrWhiteSpace(headers ?? ""))
+                {
+                    headers.Substring(1, headers.Length - 2).Split("  ").ToList().ForEach(item =>
+                    {
+                        var header = item.Split(':');
+                        if (header.Length == 2)
+                            dic[header[0].ToLower()] = header[1].Trim();
+                    });
+                }
+
+                return dic;
+            }
         }
     }
 }
