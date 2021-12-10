@@ -898,9 +898,6 @@ namespace Microsoft.Crank.Controller
                     jobResults.Properties[segments[0]] = segments[1];
                 }
 
-                // Duplicate measurements with multiple keys
-                DuplicateMeasurementKeys(jobResults);
-
                 executionResult.JobResults = jobResults;
                 executionResults.Add(executionResult);
                 
@@ -1699,9 +1696,9 @@ namespace Microsoft.Crank.Controller
                 var variables = MergeVariables(rootVariables, jobVariables, commandLineVariables);
 
                 // Apply templates on variables first
-                ApplyTemplates(variables, new TemplateContext { Model = variables.DeepClone() });
+                ApplyTemplates(variables, new TemplateContext(variables.DeepClone()));
 
-                ApplyTemplates(job, new TemplateContext { Model = variables }.SetValue("job", job));
+                ApplyTemplates(job, new TemplateContext(variables).SetValue("job", job));
 
                 // Variable are merged again in the job such that all variables (root, job, command line) be
                 // available in scripts
@@ -2172,13 +2169,28 @@ namespace Microsoft.Crank.Controller
             }                
 
             // Import default scripts sections
-            foreach (var script in configuration.DefaultScripts)
+            foreach (var script in configuration.OnResultsCreating)
             {
                 if (!String.IsNullOrWhiteSpace(script))
                 {
                     engine.Execute(script);
                 }
             }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (configuration.DefaultScripts != null && configuration.DefaultScripts.Any())
+            {
+                Log.WriteWarning($"WARNING: 'defaultScripts' has been deprecated, in the future please use 'onResultsCreating'.");
+
+                foreach (var script in configuration.OnResultsCreating)
+                {
+                    if (!String.IsNullOrWhiteSpace(script))
+                    {
+                        engine.Execute(script);
+                    }
+                }
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
 
             foreach (var jobName in dependencies)
             {
@@ -2276,6 +2288,10 @@ namespace Microsoft.Crank.Controller
                 jobResult.Environment = await jobConnections.First().GetInfoAsync();
             }
 
+            // Duplicate measurements with multiple keys
+            DuplicateMeasurementKeys(jobResults);
+
+
             // Apply scripts
 
             // When scripts are executed, the metadata and measurements are still available.
@@ -2283,8 +2299,17 @@ namespace Microsoft.Crank.Controller
             // of any job connection (multi endpoint job) are taken.
             // The "measurements" property is an array of arrays of measurements.
             // The "results" property contains all measures that are already aggregated and reduced.
-             
-            
+            // The "benchmarks" property contains all jobs by name
+
+            // Run scripts for OnResultsCreated
+            foreach (var script in configuration.OnResultsCreated)
+            {
+                if (!String.IsNullOrWhiteSpace(script))
+                {
+                    engine.Execute(script);
+                }
+            }
+
             // Run custom scripts after the results are computed
             foreach (var scriptName in _scriptOption.Values)
             {
