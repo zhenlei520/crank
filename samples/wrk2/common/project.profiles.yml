@@ -1,0 +1,19 @@
+imports:
+  - ./load.profiles.yml
+
+profiles:
+  local:
+    variables:
+      # serverAddress: localhost # 可不写，wrk2默认：localhost
+      # serverPort: 5000 # 可不写，wrk2默认端口：5000
+      connections: 5
+      requests: 1
+      duration: 1
+      scriptArchive: '1.tar' # script 压缩包路径，仅支持远程地址
+    jobs:
+      application: # 实际项目中可删除application，当前只是希望模拟应用服务启动
+        endpoints: 
+          - http://localhost:5010
+      load:
+        endpoints:
+          - http://localhost:5010

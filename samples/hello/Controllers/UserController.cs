@@ -1,24 +1,49 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Authentication;
+using Microsoft.AspNetCore.Mvc;
 
 namespace hello.Controllers
 {
     public class UserController : ControllerBase
     {
-        [HttpGet]
-        public string GetAsync()
+        private static List<User> list = new List<User>()
         {
-            var user = new {id = 1, name = "tom"};
+            new User {Id = 1, Name = "tom"}, new User {Id = 2, Name = "jim"},
+        };
+
+        [HttpGet]
+        public string GetAsync(int id)
+        {
+            var user = list.FirstOrDefault(u => u.Id == id);
             return System.Text.Json.JsonSerializer.Serialize(user);
         }
 
         [HttpPost]
-        public string Add(EditUserRequest request)
+        public string Add([FromBody] User user)
         {
-            return $"add success: userName: {request.Name}";
+            if (HttpContext.Request.Headers.TryGetValue("Authorization", out var authorization) == false
+                || authorization != "Bearer get token success")
+            {
+                throw new AuthenticationException("invalid token");
+            }
+
+            var temp = list.FirstOrDefault(u => u.Id == user.Id);
+            if (temp == null)
+            {
+                list.Add(user);
+            }
+            else
+            {
+                temp.Name = user.Name;
+            }
+
+            return $"add success: userName: {user.Name}";
         }
     }
 
-    public class EditUserRequest
+    public class User
     {
         public int Id { get; set; }
 

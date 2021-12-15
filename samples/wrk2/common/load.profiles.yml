@@ -1,0 +1,33 @@
+# 存储全部可用的Agent节点信息
+
+profiles:
+  crankAgent1:
+    jobs:
+      load:
+        endpoints:
+          - http://localhost:31151
+  crankAgent2:
+    jobs:
+      load:
+        endpoints:
+          - http://localhost:30548
+  crankAgent3:
+    jobs:
+      load:
+        endpoints:
+          - http://localhost:30101
+  crankAgent4:
+    jobs:
+      load:
+        endpoints:
+          - http://localhost:30102
+  crankAgent5:
+    jobs:
+      load:
+        endpoints:
+          - http://localhost:31126
+  crankAgent6:
+    jobs:
+      load:
+        endpoints:
+          - http://localhost:31000

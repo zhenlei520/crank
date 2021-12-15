@@ -1,0 +1,27 @@
+imports:
+  - ../../common/wrk2.yml
+  - ../../common/esc.profiles.yml
+
+jobs:
+  server:
+    source:
+      repository: https://github.com/zhenlei520/crank
+      branchOrCommit: sample
+      project: samples/hello/hello.csproj
+    readyStateText: Application started.
+
+scenarios:
+  api:
+    application: # 实际压测项目时可移除此节点，此处是为模拟应用服务启动
+      job: server
+    load:
+      job: wrk2
+      variables:
+        serverPath: /get
+        script: get.lua
+
+profiles:
+  defaultParamLocal: # 本地环境的参数信息
+    variables: 
+      serverQueryString: ?id={1}
+      serverQueryParameter: 1||2 # 随机请求/get?id=1、/get?id=2
