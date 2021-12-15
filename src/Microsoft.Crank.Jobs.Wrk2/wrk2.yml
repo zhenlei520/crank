@@ -39,4 +39,3 @@ jobs:
     arguments: "-c {{connections}} -d {{duration}}s -w {{warmup}}s -t {{threads}} {{headers[presetHeaders]}} {% for h in customHeaders %}{% assign s = h | split : ':' %}--header \"{{ s[0] }}: {{ s[1] | strip }}\" {% endfor %} -R {{rate}} -L {% if serverUri == blank or serverUri == empty %} {{serverScheme}}://{{serverAddress}}:{{serverPort}}{{serverPath}} {% else %} {{serverUri}}:{{serverPort}}{{serverPath}} {% endif %}  {% if useScript %} {% if serverQueryString != blank and serverQueryString != empty and serverQueryParameter != blank and serverQueryParameter != empty %} -q {serverQueryString} {{serverQueryString}}  {{serverQueryParameter}} {% endif %} {% if length(serviceBodyArray) > 0 %} -b {{length(serviceBodyArray)}} -sArchive {{scriptArchive}} -s {{script}} {% endif %} {% endif %}"
     options:
       requiredOperatingSystem: linux
-
