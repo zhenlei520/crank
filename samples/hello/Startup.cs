@@ -35,18 +35,25 @@ namespace hello
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGet("/", async context =>
+                endpoints.MapGet("/", async context => { await context.Response.WriteAsync("Hello World!"); });
+
+                endpoints.MapGet("/token",
+                    async context => { await context.Response.WriteAsync("get token success"); });
+
+                endpoints.MapGet("/user/get", async context =>
                 {
-                    await context.Response.WriteAsync("Hello World!");
+                    var user = new {id = 1, name = "tom"};
+                    await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(user));
                 });
             });
 
             Console.WriteLine($"AspNetCore location: {typeof(IWebHostBuilder).GetTypeInfo().Assembly.Location}");
-            Console.WriteLine($"AspNetCore version: {typeof(IWebHostBuilder).GetTypeInfo().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}");
+            Console.WriteLine(
+                $"AspNetCore version: {typeof(IWebHostBuilder).GetTypeInfo().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}");
 
             Console.WriteLine($"NETCoreApp location: {typeof(object).GetTypeInfo().Assembly.Location}");
-            Console.WriteLine($"NETCoreApp version: {typeof(object).GetTypeInfo().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}");
-    
+            Console.WriteLine(
+                $"NETCoreApp version: {typeof(object).GetTypeInfo().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}");
         }
     }
 }
