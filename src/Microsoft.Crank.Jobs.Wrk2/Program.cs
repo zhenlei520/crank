@@ -24,6 +24,8 @@ namespace Microsoft.Crank.Jobs.Wrk2
 
         static async Task<int> Main(string[] args)
         {
+            Console.WriteLine($"Wrk2 Client args: {string.Join(',', args)}");
+
             if (Environment.OSVersion.Platform != PlatformID.Unix || RuntimeInformation.ProcessArchitecture != Architecture.X64)
             {
                 Console.WriteLine($"Platform not supported: {Environment.OSVersion.Platform}/{RuntimeInformation.ProcessArchitecture}");
@@ -113,7 +115,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
                     return process.ExitCode;
                 }
             }
-            
+
             lock (stringBuilder)
             {
                 stringBuilder.Clear();
@@ -126,7 +128,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
             process.Start();
 
             BenchmarksEventSource.SetChildProcessId(process.Id);
-            
+
             process.BeginOutputReadLine();
             process.WaitForExit();
 
@@ -192,7 +194,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
                 BenchmarksEventSource.Measure("wrk2/latency/99.99;http/latency/99.99", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.990%"))));
                 BenchmarksEventSource.Measure("wrk2/latency/99.999;http/latency/99.999", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.999%"))));
 
-                using(var sr = new StringReader(output))
+                using (var sr = new StringReader(output))
                 {
                     var line = "";
 
@@ -217,7 +219,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
                             var values = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                             doc.Add(
                                 new JObject(
-                                    new JProperty("latency_us", decimal.Parse(values[0], CultureInfo.InvariantCulture)), 
+                                    new JProperty("latency_us", decimal.Parse(values[0], CultureInfo.InvariantCulture)),
                                     new JProperty("count", decimal.Parse(values[2], CultureInfo.InvariantCulture)),
                                     new JProperty("percentile", decimal.Parse(values[1], CultureInfo.InvariantCulture))
                                     ));
@@ -384,7 +386,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
             var httpClientHandler = new HttpClientHandler();
             httpClientHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
             httpClientHandler.MaxConnectionsPerServer = 1;
-            using(var httpClient = new HttpClient(httpClientHandler))
+            using (var httpClient = new HttpClient(httpClientHandler))
             {
                 var cts = new CancellationTokenSource(30000);
                 var httpMessage = new HttpRequestMessage(HttpMethod.Get, url);
