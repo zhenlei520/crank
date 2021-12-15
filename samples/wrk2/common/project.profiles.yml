@@ -9,4 +9,5 @@ profiles:
       connections: 5
       requests: 1
       duration: 1
+      warmup: 0
       scriptArchive: '1.tar' # script 压缩包路径，仅支持远程地址
