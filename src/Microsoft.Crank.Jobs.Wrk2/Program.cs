@@ -22,13 +22,18 @@ namespace Microsoft.Crank.Jobs.Wrk2
     {
         const string Wrk2Url = "https://aspnetbenchmarks.blob.core.windows.net/tools/wrk2";
 
+        const string Wrk2ScriptUrl = "http://gitlab-hz.lonsid.cn/wangzhenlei/crank-sec/-/raw/Crank-Sec-Wrk/scripts.tar";
+
         static async Task<int> Main(string[] args)
         {
+
             Console.WriteLine($"Wrk2 Client args: {string.Join(',', args)}");
 
-            if (Environment.OSVersion.Platform != PlatformID.Unix || RuntimeInformation.ProcessArchitecture != Architecture.X64)
+            if (Environment.OSVersion.Platform != PlatformID.Unix ||
+                RuntimeInformation.ProcessArchitecture != Architecture.X64)
             {
-                Console.WriteLine($"Platform not supported: {Environment.OSVersion.Platform}/{RuntimeInformation.ProcessArchitecture}");
+                Console.WriteLine(
+                    $"Platform not supported: {Environment.OSVersion.Platform}/{RuntimeInformation.ProcessArchitecture}");
                 return -1;
             }
 
@@ -36,6 +41,8 @@ namespace Microsoft.Crank.Jobs.Wrk2
             Console.WriteLine("args: " + String.Join(' ', args));
 
             var wrk2Filename = await DownloadWrk2Async();
+
+            var scriptFilename = await DownloadWrk2Scripts();
 
             Console.Write("Measuring first request ... ");
             await MeasureFirstRequest(args);
@@ -62,6 +69,35 @@ namespace Microsoft.Crank.Jobs.Wrk2
                 return -1;
             }
 
+            string param1 = string.Empty;
+            string param2 = string.Empty;
+            var paramIndex = argsList.FindIndex(x => String.Equals(x, "-p", StringComparison.OrdinalIgnoreCase));
+            if (paramIndex >= 0)
+            {
+                param1 = argsList[paramIndex + 1];
+                param2 = argsList[paramIndex + 2];
+                argsList.RemoveAt(paramIndex);
+                argsList.RemoveAt(paramIndex);
+                argsList.RemoveAt(paramIndex);
+            }
+            else
+            {
+                Console.WriteLine("Couldn't find -p argument");
+            }
+
+            string scriptParam = string.Empty;
+            var scriptIndex = argsList.FindIndex(x => String.Equals(x, "-s", StringComparison.OrdinalIgnoreCase));
+            if (scriptIndex >= 0)
+            {
+                scriptParam = argsList[scriptIndex + 1];
+                argsList.RemoveAt(scriptIndex);
+                argsList.RemoveAt(scriptIndex);
+            }
+            else
+            {
+                Console.WriteLine("Couldn't find -s argument");
+            }
+
             var warmupIndex = argsList.FindIndex(x => String.Equals(x, "-w", StringComparison.OrdinalIgnoreCase));
             if (warmupIndex >= 0)
             {
@@ -72,15 +108,11 @@ namespace Microsoft.Crank.Jobs.Wrk2
 
             args = argsList.Select(Quote).ToArray();
 
-            var baseArguments = String.Join(' ', args);
+            var baseArguments = string.Join(' ', args);
 
             var process = new Process()
             {
-                StartInfo = {
-                    FileName = wrk2Filename,
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                },
+                StartInfo = { FileName = wrk2Filename, RedirectStandardOutput = true, UseShellExecute = false, },
                 EnableRaisingEvents = true
             };
 
@@ -101,9 +133,17 @@ namespace Microsoft.Crank.Jobs.Wrk2
 
             // Warmup
 
-            if (!String.IsNullOrEmpty(warmup) && warmup != "0s")
+            if (!string.IsNullOrEmpty(warmup) && warmup != "0s")
             {
-                process.StartInfo.Arguments = $" -d {warmup} {baseArguments}";
+                string arguments = $" -d {warmup} {baseArguments}";
+
+                arguments += GetScripts(scriptFilename, scriptParam);
+
+                arguments += GetParams(param1, param2);
+
+                Console.WriteLine("预热：" + arguments);
+
+                process.StartInfo.Arguments = arguments;
 
                 Console.WriteLine("> wrk2 " + process.StartInfo.Arguments);
 
@@ -121,7 +161,15 @@ namespace Microsoft.Crank.Jobs.Wrk2
                 stringBuilder.Clear();
             }
 
-            process.StartInfo.Arguments = $" -d {duration} {baseArguments}";
+            string trueArguments = $" -d {duration} {baseArguments}";
+
+            trueArguments += GetScripts(scriptFilename, scriptParam);
+
+            trueArguments += GetParams(param1, param2);
+
+            Console.WriteLine("执行：" + trueArguments);
+
+            process.StartInfo.Arguments = trueArguments;
 
             Console.WriteLine("> wrk2 " + process.StartInfo.Arguments);
 
@@ -144,12 +192,18 @@ namespace Microsoft.Crank.Jobs.Wrk2
                 output = stringBuilder.ToString();
             }
 
-            BenchmarksEventSource.Register("wrk2/rps/mean;http/rps/mean", Operations.Max, Operations.Sum, "Requests/sec", "Requests per second", "n0");
-            BenchmarksEventSource.Register("wrk2/requests;http/requests", Operations.Max, Operations.Sum, "Requests", "Total number of requests", "n0");
-            BenchmarksEventSource.Register("wrk2/latency/mean;http/latency/mean", Operations.Max, Operations.Avg, "Mean latency (ms)", "Mean latency (ms)", "n2");
-            BenchmarksEventSource.Register("wrk2/latency/max;http/latency/max", Operations.Max, Operations.Max, "Max latency (ms)", "Max latency (ms)", "n2");
-            BenchmarksEventSource.Register("wrk2/errors/badresponses;http/requests/badresponses", Operations.Max, Operations.Sum, "Bad responses", "Non-2xx or 3xx responses", "n0");
-            BenchmarksEventSource.Register("wrk2/errors/socketerrors;http/requests/errors", Operations.Max, Operations.Sum, "Socket errors", "Socket errors", "n0");
+            BenchmarksEventSource.Register("wrk2/rps/mean;http/rps/mean", Operations.Max, Operations.Sum,
+                "Requests/sec", "Requests per second", "n0");
+            BenchmarksEventSource.Register("wrk2/requests;http/requests", Operations.Max, Operations.Sum, "Requests",
+                "Total number of requests", "n0");
+            BenchmarksEventSource.Register("wrk2/latency/mean;http/latency/mean", Operations.Max, Operations.Avg,
+                "Mean latency (ms)", "Mean latency (ms)", "n2");
+            BenchmarksEventSource.Register("wrk2/latency/max;http/latency/max", Operations.Max, Operations.Max,
+                "Max latency (ms)", "Max latency (ms)", "n2");
+            BenchmarksEventSource.Register("wrk2/errors/badresponses;http/requests/badresponses", Operations.Max,
+                Operations.Sum, "Bad responses", "Non-2xx or 3xx responses", "n0");
+            BenchmarksEventSource.Register("wrk2/errors/socketerrors;http/requests/errors", Operations.Max,
+                Operations.Sum, "Socket errors", "Socket errors", "n0");
 
             var rpsMatch = Regex.Match(output, @"Requests/sec:\s*([\d\.]*)");
             if (rpsMatch.Success && rpsMatch.Groups.Count == 2)
@@ -170,29 +224,47 @@ namespace Microsoft.Crank.Jobs.Wrk2
             BenchmarksEventSource.Measure("wrk2/requests;http/requests", ReadRequests(requestsCountMatch));
 
             var badResponsesMatch = Regex.Match(output, @"Non-2xx or 3xx responses: ([\d\.]*)");
-            BenchmarksEventSource.Measure("wrk2/errors/badresponses;http/requests/badresponses", ReadBadReponses(badResponsesMatch));
+            BenchmarksEventSource.Measure("wrk2/errors/badresponses;http/requests/badresponses",
+                ReadBadReponses(badResponsesMatch));
 
-            var socketErrorsMatch = Regex.Match(output, @"Socket errors: connect ([\d\.]*), read ([\d\.]*), write ([\d\.]*), timeout ([\d\.]*)");
-            BenchmarksEventSource.Measure("wrk2/errors/socketerrors;http/requests/errors", CountSocketErrors(socketErrorsMatch));
+            var socketErrorsMatch = Regex.Match(output,
+                @"Socket errors: connect ([\d\.]*), read ([\d\.]*), write ([\d\.]*), timeout ([\d\.]*)");
+            BenchmarksEventSource.Measure("wrk2/errors/socketerrors;http/requests/errors",
+                CountSocketErrors(socketErrorsMatch));
 
             if (parseLatency)
             {
-                BenchmarksEventSource.Register("wrk2/latency/50;http/latency/50", Operations.Max, Operations.Max, "Latency 50th (ms)", "Latency 50th (ms)", "n2");
-                BenchmarksEventSource.Register("wrk2/latency/75;http/latency/75", Operations.Max, Operations.Max, "Latency 75th (ms)", "Latency 75th (ms)", "n2");
-                BenchmarksEventSource.Register("wrk2/latency/90;http/latency/90", Operations.Max, Operations.Max, "Latency 90th (ms)", "Latency 90th (ms)", "n2");
-                BenchmarksEventSource.Register("wrk2/latency/99;http/latency/99", Operations.Max, Operations.Max, "Latency 99th (ms)", "Latency 99th (ms)", "n2");
-                BenchmarksEventSource.Register("wrk2/latency/99.9;http/latency/99.9", Operations.Max, Operations.Max, "Latency 99.9th (ms)", "Latency 99.9th (ms)", "n2");
-                BenchmarksEventSource.Register("wrk2/latency/99.99;http/latency/99.99", Operations.Max, Operations.Max, "Latency 99.99th (ms)", "Latency 99.99th (ms)", "n2");
-                BenchmarksEventSource.Register("wrk2/latency/99.999;http/latency/99.999", Operations.Max, Operations.Max, "Latency 99.999th (ms)", "Latency 99.999th (ms)", "n2");
-                BenchmarksEventSource.Register("wrk2/latency/distribution", Operations.All, Operations.All, "Latency distribution", "Latency distribution", "json");
+                BenchmarksEventSource.Register("wrk2/latency/50;http/latency/50", Operations.Max, Operations.Max,
+                    "Latency 50th (ms)", "Latency 50th (ms)", "n2");
+                BenchmarksEventSource.Register("wrk2/latency/75;http/latency/75", Operations.Max, Operations.Max,
+                    "Latency 75th (ms)", "Latency 75th (ms)", "n2");
+                BenchmarksEventSource.Register("wrk2/latency/90;http/latency/90", Operations.Max, Operations.Max,
+                    "Latency 90th (ms)", "Latency 90th (ms)", "n2");
+                BenchmarksEventSource.Register("wrk2/latency/99;http/latency/99", Operations.Max, Operations.Max,
+                    "Latency 99th (ms)", "Latency 99th (ms)", "n2");
+                BenchmarksEventSource.Register("wrk2/latency/99.9;http/latency/99.9", Operations.Max, Operations.Max,
+                    "Latency 99.9th (ms)", "Latency 99.9th (ms)", "n2");
+                BenchmarksEventSource.Register("wrk2/latency/99.99;http/latency/99.99", Operations.Max, Operations.Max,
+                    "Latency 99.99th (ms)", "Latency 99.99th (ms)", "n2");
+                BenchmarksEventSource.Register("wrk2/latency/99.999;http/latency/99.999", Operations.Max,
+                    Operations.Max, "Latency 99.999th (ms)", "Latency 99.999th (ms)", "n2");
+                BenchmarksEventSource.Register("wrk2/latency/distribution", Operations.All, Operations.All,
+                    "Latency distribution", "Latency distribution", "json");
 
-                BenchmarksEventSource.Measure("wrk2/latency/50;http/latency/50", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "50\\.000%"))));
-                BenchmarksEventSource.Measure("wrk2/latency/75;http/latency/75", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "75\\.000%"))));
-                BenchmarksEventSource.Measure("wrk2/latency/90;http/latency/90", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "90\\.000%"))));
-                BenchmarksEventSource.Measure("wrk2/latency/99;http/latency/99", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.000%"))));
-                BenchmarksEventSource.Measure("wrk2/latency/99.9;http/latency/99.9", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.900%"))));
-                BenchmarksEventSource.Measure("wrk2/latency/99.99;http/latency/99.99", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.990%"))));
-                BenchmarksEventSource.Measure("wrk2/latency/99.999;http/latency/99.999", ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.999%"))));
+                BenchmarksEventSource.Measure("wrk2/latency/50;http/latency/50",
+                    ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "50\\.000%"))));
+                BenchmarksEventSource.Measure("wrk2/latency/75;http/latency/75",
+                    ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "75\\.000%"))));
+                BenchmarksEventSource.Measure("wrk2/latency/90;http/latency/90",
+                    ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "90\\.000%"))));
+                BenchmarksEventSource.Measure("wrk2/latency/99;http/latency/99",
+                    ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.000%"))));
+                BenchmarksEventSource.Measure("wrk2/latency/99.9;http/latency/99.9",
+                    ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.900%"))));
+                BenchmarksEventSource.Measure("wrk2/latency/99.99;http/latency/99.99",
+                    ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.990%"))));
+                BenchmarksEventSource.Measure("wrk2/latency/99.999;http/latency/99.999",
+                    ReadLatency(Regex.Match(output, String.Format(LatencyPattern, "99\\.999%"))));
 
                 using (var sr = new StringReader(output))
                 {
@@ -222,7 +294,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
                                     new JProperty("latency_us", decimal.Parse(values[0], CultureInfo.InvariantCulture)),
                                     new JProperty("count", decimal.Parse(values[2], CultureInfo.InvariantCulture)),
                                     new JProperty("percentile", decimal.Parse(values[1], CultureInfo.InvariantCulture))
-                                    ));
+                                ));
 
                             line = sr.ReadLine();
                         }
@@ -331,14 +403,12 @@ namespace Microsoft.Crank.Jobs.Wrk2
                     int.Parse(socketErrorsMatch.Groups[3].Value) +
                     int.Parse(socketErrorsMatch.Groups[4].Value)
                     ;
-
             }
             catch
             {
                 Console.WriteLine("Failed to parse socket errors");
                 return 0;
             }
-
         }
 
         private static double ReadLatency(Match match)
@@ -384,7 +454,8 @@ namespace Microsoft.Crank.Jobs.Wrk2
 
             // Configuring the http client to trust the self-signed certificate
             var httpClientHandler = new HttpClientHandler();
-            httpClientHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            httpClientHandler.ServerCertificateCustomValidationCallback =
+                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
             httpClientHandler.MaxConnectionsPerServer = 1;
             using (var httpClient = new HttpClient(httpClientHandler))
             {
@@ -401,7 +472,8 @@ namespace Microsoft.Crank.Jobs.Wrk2
                         var elapsed = stopwatch.ElapsedMilliseconds;
                         Console.WriteLine($"{elapsed} ms");
 
-                        BenchmarksEventSource.Register("http/firstrequest", Operations.Max, Operations.Max, "First Request (ms)", "Time to first request in ms", "n0");
+                        BenchmarksEventSource.Register("http/firstrequest", Operations.Max, Operations.Max,
+                            "First Request (ms)", "Time to first request in ms", "n0");
                         BenchmarksEventSource.Measure("http/firstrequest", elapsed);
                     }
                 }
@@ -410,6 +482,29 @@ namespace Microsoft.Crank.Jobs.Wrk2
                     Console.WriteLine("A timeout occurred while measuring the first request");
                 }
             }
+        }
+
+        public static string GetScripts(string scriptFilename, string scriptParam)
+        {
+            if (!string.IsNullOrWhiteSpace(scriptParam))
+                return $" --script ./{scriptFilename}/{scriptParam}";
+            return "";
+        }
+
+        public static string GetParams(string param1, string param2)
+        {
+            if (param1.Length > 0)
+            {
+                var list = param2.Split("||").Select(x => $"'{x}'").ToList();
+                StringBuilder stringBuilder1 = new StringBuilder();
+                foreach (var item in list)
+                {
+                    stringBuilder1.Append(item + " ");
+                }
+
+                return $" -- 0 '{param1}' {stringBuilder1.ToString()} ";
+            }
+            return "";
         }
 
         public static async Task<string> DownloadWrk2Async()
@@ -446,6 +541,56 @@ namespace Microsoft.Crank.Jobs.Wrk2
             Process.Start("chmod", "+x " + wrk2Filename);
 
             return wrk2Filename;
+        }
+
+        public static async Task<string> DownloadWrk2Scripts()
+        {
+            var scriptFileName = Path.GetFileName(Wrk2ScriptUrl);
+            // Search for cached file
+            var cacheFolder = Path.Combine(Path.GetTempPath(), ".benchmarks");
+
+            var baseDirectory = System.AppDomain.CurrentDomain.BaseDirectory;
+
+            if (!Directory.Exists(cacheFolder))
+            {
+                Directory.CreateDirectory(cacheFolder);
+            }
+
+            Execute("wget", $"-P {baseDirectory} {Wrk2ScriptUrl}");
+
+            Console.WriteLine($"工作目录：{baseDirectory}");
+
+            Execute("tar", "-xvf " + scriptFileName);
+
+            string script = scriptFileName.Substring(0, scriptFileName.Length - 4);
+
+            Console.Write("lua is " + script);
+            return script;
+        }
+
+        private static void Execute(string fileName, string cmd = "")
+        {
+            Console.WriteLine($"当前执行: {fileName} {cmd} ... start");
+            var process = new Process()
+            {
+                StartInfo = { FileName = fileName, RedirectStandardOutput = true, UseShellExecute = false, },
+                EnableRaisingEvents = true
+            };
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (e != null && e.Data != null)
+                {
+                    Console.WriteLine("execute .. " + e.Data);
+                }
+            };
+            if (!string.IsNullOrEmpty(cmd))
+            {
+                process.StartInfo.Arguments = cmd;
+            }
+
+            process.Start();
+            process.WaitForExit();
+            Console.WriteLine($"当前执行: {fileName} {cmd} ... end");
         }
 
         private static string Quote(string s)

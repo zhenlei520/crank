@@ -4,8 +4,8 @@ imports:
 profiles:
   local:
     variables:
-      # serverAddress: localhost # 可不写，wrk2默认：localhost
-      # serverPort: 5000 # 可不写，wrk2默认端口：5000
+      serverAddress: localhost # 可不写，wrk2默认：localhost
+      serverPort: 5000 # 可不写，wrk2默认端口：5000
       connections: 5
       requests: 1
       duration: 1
