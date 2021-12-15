@@ -26,7 +26,7 @@ profiles:
     jobs: 
       application:
         endpoints: 
-          - http://localhost:5010
+          - http://localhost:5011
       load:
         endpoints: 
-          - http://localhost:5010
+          - http://localhost:5011

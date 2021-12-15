@@ -1,11 +1,14 @@
-# �洢ȫ�����õ�Agent�ڵ���Ϣ
+# 存储全部可用的Agent节点信息
 
 profiles:
   crankAgent1:
     jobs:
+      application: # 实际项目中可删除application，当前只是希望模拟应用服务启动
+        endpoints: 
+          - http://localhost:5011
       load:
         endpoints:
-          - http://localhost:31151
+          - http://localhost:5011
   crankAgent2:
     jobs:
       load:

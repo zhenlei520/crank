@@ -1,19 +1,12 @@
 imports:
-  - ./load.profiles.yml
+  - ../../common/load.profiles.yml
 
 profiles:
   local:
     variables:
-      # serverAddress: localhost # ¿É²»Ğ´£¬wrk2Ä¬ÈÏ£ºlocalhost
-      # serverPort: 5000 # ¿É²»Ğ´£¬wrk2Ä¬ÈÏ¶Ë¿Ú£º5000
+      # serverAddress: localhost # å¯ä¸å†™ï¼Œwrk2é»˜è®¤ï¼šlocalhost
+      # serverPort: 5000 # å¯ä¸å†™ï¼Œwrk2é»˜è®¤ç«¯å£ï¼š5000
       connections: 5
       requests: 1
       duration: 1
-      scriptArchive: '1.tar' # script Ñ¹Ëõ°üÂ·¾¶£¬½öÖ§³ÖÔ¶³ÌµØÖ·
-    jobs:
-      application: # Êµ¼ÊÏîÄ¿ÖĞ¿ÉÉ¾³ıapplication£¬µ±Ç°Ö»ÊÇÏ£ÍûÄ£ÄâÓ¦ÓÃ·şÎñÆô¶¯
-        endpoints: 
-          - http://localhost:5010
-      load:
-        endpoints:
-          - http://localhost:5010
+      scriptArchive: '1.tar' # script å‹ç¼©åŒ…è·¯å¾„ï¼Œä»…æ”¯æŒè¿œç¨‹åœ°å€

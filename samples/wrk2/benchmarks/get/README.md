@@ -1,16 +1,16 @@
-## wrk2-»ñÈ¡ÉÌÆ·ÏêÇé
+## wrk2-èŽ·å–ç”¨æˆ·è¯¦æƒ…
 
-``` Ä¿Â¼½á¹¹
+``` ç›®å½•ç»“æž„
 benchmarks
-©À©¤©¤ defaultTitle              ³¡¾°Ãû³Æ( Description )
-©¸©¤©¤ guide.bat                 Òýµ¼½Å±¾£¬ÎªºóÐø³¡¾°ÆôÓÃ¶à¸ö½Ó¿ÚÑ¹²âÒýµ¼¡¢½ö½Ó¿ÚÑ¹²â²»ÐèÒª´ËÎÄ¼þ£¬´ËÎÄ¼þÎÞÐèÐÞ¸Ä
-©¸©¤©¤ load.bat                  ×îÖÕÖ´ÐÐµÄ½Å±¾£¬ÆäÖÐÖ¸¶¨ÁËÒªÖ¸¶¨µÄymlÅäÖÃ¡¢³¡¾°¡¢ÒÔ¼°ÈÎÎñ»·¾³ÊÇ.net 5.0
-©¸©¤©¤ load.benchmarks.yml       ymlÅäÖÃ
-©¸©¤©¤ load.local.bat            ²âÊÔ±¾µØ»·¾³Ê±ÒªÖ´ÐÐµÄ½Å±¾¡¢¸ñÊ½£ºload.{»·¾³}.bat
-©¸©¤©¤ README.md                 °ïÖúÎÄµµ
+â”œâ”€â”€ defaultTitle              åœºæ™¯åç§°( Description )
+â””â”€â”€ guide.bat                 å¼•å¯¼è„šæœ¬ï¼Œä¸ºåŽç»­åœºæ™¯å¯ç”¨å¤šä¸ªæŽ¥å£åŽ‹æµ‹å¼•å¯¼ã€ä»…æŽ¥å£åŽ‹æµ‹ä¸éœ€è¦æ­¤æ–‡ä»¶ï¼Œæ­¤æ–‡ä»¶æ— éœ€ä¿®æ”¹
+â””â”€â”€ load.bat                  æœ€ç»ˆæ‰§è¡Œçš„è„šæœ¬ï¼Œå…¶ä¸­æŒ‡å®šäº†è¦æŒ‡å®šçš„ymlé…ç½®ã€åœºæ™¯ã€ä»¥åŠä»»åŠ¡çŽ¯å¢ƒæ˜¯.net 5.0
+â””â”€â”€ load.benchmarks.yml       ymlé…ç½®
+â””â”€â”€ load.local.bat            æµ‹è¯•æœ¬åœ°çŽ¯å¢ƒæ—¶è¦æ‰§è¡Œçš„è„šæœ¬ã€æ ¼å¼ï¼šload.{çŽ¯å¢ƒ}.bat
+â””â”€â”€ README.md                 å¸®åŠ©æ–‡æ¡£
 ```
 
 
-## ÈçºÎµ¥¶ÀÑ¹²â±¾µØ»·¾³µÄ»ñÈ¡ÓÃ»§ÏêÇé½Ó¿Ú£¿
+## å¦‚ä½•å•ç‹¬åŽ‹æµ‹æœ¬åœ°çŽ¯å¢ƒçš„èŽ·å–ç”¨æˆ·è¯¦æƒ…æŽ¥å£ï¼Ÿ
 
-Ë«»÷load.local.bat
+åŒå‡»load.local.bat

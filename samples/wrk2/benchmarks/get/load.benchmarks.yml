@@ -1,6 +1,6 @@
 imports:
   - ../../common/wrk2.yml
-  - ../../common/esc.profiles.yml
+  - ../../common/project.profiles.yml
 
 jobs:
   server:
@@ -12,7 +12,7 @@ jobs:
 
 scenarios:
   api:
-    application: # Êµ¼ÊÑ¹²âÏîÄ¿Ê±¿ÉÒÆ³ı´Ë½Úµã£¬´Ë´¦ÊÇÎªÄ£ÄâÓ¦ÓÃ·şÎñÆô¶¯
+    application: # å®é™…å‹æµ‹é¡¹ç›®æ—¶å¯ç§»é™¤æ­¤èŠ‚ç‚¹ï¼Œæ­¤å¤„æ˜¯ä¸ºæ¨¡æ‹Ÿåº”ç”¨æœåŠ¡å¯åŠ¨
       job: server
     load:
       job: wrk2
@@ -21,7 +21,7 @@ scenarios:
         script: get.lua
 
 profiles:
-  defaultParamLocal: # ±¾µØ»·¾³µÄ²ÎÊıĞÅÏ¢
+  defaultParamLocal: # æœ¬åœ°ç¯å¢ƒçš„å‚æ•°ä¿¡æ¯
     variables: 
       serverQueryString: ?id={1}
-      serverQueryParameter: 1||2 # Ëæ»úÇëÇó/get?id=1¡¢/get?id=2
+      serverQueryParameter: 1||2 # éšæœºè¯·æ±‚/get?id=1ã€/get?id=2
