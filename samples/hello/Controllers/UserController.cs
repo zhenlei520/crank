@@ -33,13 +33,11 @@ namespace hello.Controllers
             if (temp == null)
             {
                 list.Add(user);
-            }
-            else
-            {
-                temp.Name = user.Name;
+
+                return $"add success: userName: {user.Name}";
             }
 
-            return $"add success: userName: {user.Name}";
+            return $"add lose the user is exist";
         }
     }
 
