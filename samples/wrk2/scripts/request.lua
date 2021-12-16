@@ -50,10 +50,11 @@ request = function()
         end
 
         if util.isEmpty(bodyArray)  == false then
+            print('post body length : ' .. util.length(bodyArray))
             local body = util.random(bodyArray)
             wrk.body = body
         end
-
+            
         return wrk.format(methods, path)
     end
 end
@@ -62,8 +63,9 @@ response = function(status, headers, body)
     if not token and status == 200 then
         print('token: ' .. body)
         token = body
+        wrk.headers["Content-Type"] = 'application/json'
         wrk.headers["Authorization"] = 'Bearer ' .. token
     else
-        print('body .. ' .. body)
+        print('status: ' .. status .. ' body: ' .. body)
     end
 end
