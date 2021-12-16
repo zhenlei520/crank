@@ -23,19 +23,16 @@ function init(args)
 
     if util.length(args) > 0 then
         util.forEach(args, function(i, v)
-
-            print('i: '  .. i .. ' v: ' .. v)
+            print('i: ' .. i .. ' v: ' .. v)
 
             local temp = util.replace(v, '\'', '')
-            if util.isEmpty(temp) == false then
-                if i == 1 then
-                    print('request methods: ' .. temp)
-                    methods = temp
-                elseif i == 2 then
-                    queryParamArray = util.split(temp, '|||')
-                elseif i == 3 then
-                    bodyArray = util.split(temp, '|||')
-                end
+            if i == 1 then
+                print('request methods: ' .. temp)
+                methods = temp
+            elseif i == 2 then
+                queryParamArray = util.split(temp, '|||')
+            elseif i == 3 then
+                bodyArray = util.split(temp, '|||')
             end
         end)
     end
@@ -47,12 +44,12 @@ request = function()
     else
         local path = queryPath
 
-        if util.isEmpty(queryParamArray) then
+        if util.isEmpty(queryParamArray) == false then
             path = util.random(queryParamArray)
             path = queryPath .. path
         end
 
-        if util.isEmpty(bodyArray) then
+        if util.isEmpty(bodyArray)  == false then
             local body = util.random(bodyArray)
             wrk.body = body
         end
@@ -66,5 +63,7 @@ response = function(status, headers, body)
         print('token: ' .. body)
         token = body
         wrk.headers["Authorization"] = 'Bearer ' .. token
+    else
+        print('body .. ' .. body)
     end
 end

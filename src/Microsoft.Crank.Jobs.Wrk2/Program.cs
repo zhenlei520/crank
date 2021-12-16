@@ -23,7 +23,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
     {
         const string Wrk2Url = "https://aspnetbenchmarks.blob.core.windows.net/tools/wrk2";
 
-        const string DefaultWrk2ScriptUrl = "https://gitee.com/zhenlei520/crank/raw/sample/src/Microsoft.Crank.Jobs.Wrk2/scripts.tar";
+        const string DefaultWrk2ScriptUrl = "https://gitee.com/zhenlei520/crank/raw/sample/src/Microsoft.Crank.Jobs.Wrk2/scripts.tar.gz";
 
         static async Task<int> Main(string[] args)
         {
@@ -563,7 +563,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
                 var index = 1;
                 foreach (var value in item.Split('|'))
                 {
-                    stringBuilder.Append(query.Replace($"{index}", value));
+                    stringBuilder.Append(query.Replace("{" + index + "}", value));
                     index++;
                 }
                 if (index > 1)
@@ -571,10 +571,10 @@ namespace Microsoft.Crank.Jobs.Wrk2
                     stringBuilder.Append("|||");
                 }
             }
-            var str= stringBuilder.ToString();
+            var str = stringBuilder.ToString();
             if (!string.IsNullOrEmpty(str))
                 str = str.Substring(0, str.Length - 3);
-            
+
             return str;
         }
 
