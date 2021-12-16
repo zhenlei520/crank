@@ -142,7 +142,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
 
             List<string> bodyPamaterArray = new List<string>();
 
-            var bodyIndex = argsList.FindIndex(x => String.Equals(x, "-q", StringComparison.OrdinalIgnoreCase));
+            var bodyIndex = argsList.FindIndex(x => String.Equals(x, "-b", StringComparison.OrdinalIgnoreCase));
             if (bodyIndex >= 0)
             {
                 int bodyLength = Convert.ToInt32(argsList[bodyIndex + 1]);
@@ -571,7 +571,11 @@ namespace Microsoft.Crank.Jobs.Wrk2
                     stringBuilder.Append("|||");
                 }
             }
-            return stringBuilder.ToString();
+            var str= stringBuilder.ToString();
+            if (!string.IsNullOrEmpty(str))
+                str = str.Substring(0, str.Length - 3);
+            
+            return str;
         }
 
         private static string GetBodyParam(List<string> bodyArray)
