@@ -1,5 +1,5 @@
 imports:
-  - ../../common/load.profiles.yml
+  - https://raw.githubusercontent.com/zhenlei520/crank/sample/samples/wrk2/common/load.profiles.yml
 
 profiles:
   local:
