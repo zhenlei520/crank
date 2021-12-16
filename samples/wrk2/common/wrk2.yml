@@ -31,7 +31,7 @@ jobs:
       serverPath: / #不需要带参数
       useScript: true # 是否使用lua脚本, 默认使用
       serverQueryString: '' # get请求参数
-      serverQueryParameter: '' # 不同请求用||分割，单词请求多参数使用|分割
+      serverQueryParameter: '' # 不同请求用||分割，单次请求多参数使用|分割
       serviceBodyArray: [] # 多组post请求集合，格式：[{\"Id\":\"1\",\"Name\":\"Tom\"}]
       serviceBodyLength: 0 # 多少组body请求
       scriptArchive: '' # lua压缩包地址，仅支持tar

@@ -1,4 +1,5 @@
 local util = require("./scripts/common/util")
+local oAuth = require("./scripts/common/oauth")
 
 queryPath = nil -- 存储请求的请求接口地址，不包含参数
 methods = 'GET'
@@ -9,9 +10,8 @@ bodyArray = nil
 function init(args)
     -- 格式: 
     -- 参数1: Request Methods 
-    -- 参数2: Authorization 
-    -- 参数3: QueryParam 格式：/get?id=1|||/get?id=2
-    -- 参数4: BodyArray 格式：{"Id":3,"Name":"Jim"}|||{"Id":4,"Name":"Jerry"}
+    -- 参数2: QueryParam 格式：/get?id=1|||/get?id=2
+    -- 参数3: BodyArray 格式：{"Id":3,"Name":"Jim"}|||{"Id":4,"Name":"Jerry"}
 
     print('wrk init')
 
@@ -19,21 +19,21 @@ function init(args)
 
     queryPath = wrk.path
 
-    print('old path: ' .. queryPath)
+    print('path: ' .. queryPath)
 
     if util.length(args) > 0 then
         util.forEach(args, function(i, v)
+
+            print('i: '  .. i .. ' v: ' .. v)
+
             local temp = util.replace(v, '\'', '')
             if util.isEmpty(temp) == false then
                 if i == 1 then
                     print('request methods: ' .. temp)
                     methods = temp
                 elseif i == 2 then
-                    print('Authorization : ' .. temp)
-                    wrk.headers["Authorization"] = 'Bearer ' .. temp
-                elseif i == 3 then
                     queryParamArray = util.split(temp, '|||')
-                elseif i == 4 then
+                elseif i == 3 then
                     bodyArray = util.split(temp, '|||')
                 end
             end
@@ -42,17 +42,28 @@ function init(args)
 end
 
 request = function()
-    local path = queryPath
+    if not token then
+        return oAuth.request()
+    else
+        local path = queryPath
 
-    if util.isEmpty(queryParamArray) then
-        path = util.random(queryParamArray)
-        path = queryPath .. path
+        if util.isEmpty(queryParamArray) then
+            path = util.random(queryParamArray)
+            path = queryPath .. path
+        end
+
+        if util.isEmpty(bodyArray) then
+            local body = util.random(bodyArray)
+            wrk.body = body
+        end
+
+        return wrk.format(methods, path)
     end
+end
 
-    if util.isEmpty(bodyArray) then
-        local body = util.random(bodyArray)
-        wrk.body = body
+response = function(status, headers, body)
+    if not token and status == 200 then
+        token = body
+        wrk.headers["Authorization"] = 'Bearer ' .. token
     end
-
-    return wrk.format(methods, path)
 end

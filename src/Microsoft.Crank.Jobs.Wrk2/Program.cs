@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -22,11 +23,10 @@ namespace Microsoft.Crank.Jobs.Wrk2
     {
         const string Wrk2Url = "https://aspnetbenchmarks.blob.core.windows.net/tools/wrk2";
 
-        const string Wrk2ScriptUrl = "http://gitlab-hz.lonsid.cn/wangzhenlei/crank-sec/-/raw/Crank-Sec-Wrk/scripts.tar";
+        const string DefaultWrk2ScriptUrl = "https://raw.githubusercontent.com/zhenlei520/crank/sample/src/Microsoft.Crank.Jobs.Wrk2/scripts.tar";
 
         static async Task<int> Main(string[] args)
         {
-
             Console.WriteLine($"Wrk2 Client args: {string.Join(',', args)}");
 
             if (Environment.OSVersion.Platform != PlatformID.Unix ||
@@ -40,9 +40,52 @@ namespace Microsoft.Crank.Jobs.Wrk2
             Console.WriteLine("WRK2 Client");
             Console.WriteLine("args: " + String.Join(' ', args));
 
+            var argsList = args.ToList();
+
             var wrk2Filename = await DownloadWrk2Async();
 
-            var scriptFilename = await DownloadWrk2Scripts();
+            #region 得到script压缩包信息
+            string scriptArchiveUrl = string.Empty;//tar压缩包
+            var scriptArchiveIndex = argsList.FindIndex(x => String.Equals(x, "-sArchive", StringComparison.OrdinalIgnoreCase));
+            if (scriptArchiveIndex >= 0)
+            {
+                scriptArchiveUrl = argsList[scriptArchiveIndex + 1];
+                argsList.RemoveAt(scriptArchiveIndex);
+                argsList.RemoveAt(scriptArchiveIndex);
+            }
+            else
+            {
+                Console.WriteLine("Couldn't find -sArchive argument");
+            }
+            #endregion
+
+            #region 得到实际执行的lua脚本
+            string scriptParam = string.Empty;
+            var scriptIndex = argsList.FindIndex(x => String.Equals(x, "-s", StringComparison.OrdinalIgnoreCase));
+            if (scriptIndex >= 0)
+            {
+                scriptParam = argsList[scriptIndex + 1];
+                argsList.RemoveAt(scriptIndex);
+                argsList.RemoveAt(scriptIndex);
+            }
+            else
+            {
+                Console.WriteLine("Couldn't find -s argument");
+            }
+            #endregion
+
+            #region 得到最终添加的script脚本
+            var fullScript = string.Empty;
+            if (!string.IsNullOrEmpty(scriptArchiveUrl))
+            {
+                string scriptArchive = DownloadWrk2Scripts(scriptArchiveUrl);
+                fullScript = GetScripts(scriptParam, scriptArchive);
+            }
+            else
+            {
+                fullScript = GetScripts(scriptParam);
+            }
+            #endregion
 
             Console.Write("Measuring first request ... ");
             await MeasureFirstRequest(args);
@@ -53,8 +96,6 @@ namespace Microsoft.Crank.Jobs.Wrk2
             // Extracting duration parameters
             string warmup = "";
             string duration = "";
-
-            var argsList = args.ToList();
 
             var durationIndex = argsList.FindIndex(x => String.Equals(x, "-d", StringComparison.OrdinalIgnoreCase));
             if (durationIndex >= 0)
@@ -69,41 +110,50 @@ namespace Microsoft.Crank.Jobs.Wrk2
                 return -1;
             }
 
-            string param1 = string.Empty;
-            string param2 = string.Empty;
-            var paramIndex = argsList.FindIndex(x => String.Equals(x, "-p", StringComparison.OrdinalIgnoreCase));
-            if (paramIndex >= 0)
-            {
-                param1 = argsList[paramIndex + 1];
-                param2 = argsList[paramIndex + 2];
-                argsList.RemoveAt(paramIndex);
-                argsList.RemoveAt(paramIndex);
-                argsList.RemoveAt(paramIndex);
-            }
-            else
-            {
-                Console.WriteLine("Couldn't find -p argument");
-            }
-
-            string scriptParam = string.Empty;
-            var scriptIndex = argsList.FindIndex(x => String.Equals(x, "-s", StringComparison.OrdinalIgnoreCase));
-            if (scriptIndex >= 0)
-            {
-                scriptParam = argsList[scriptIndex + 1];
-                argsList.RemoveAt(scriptIndex);
-                argsList.RemoveAt(scriptIndex);
-            }
-            else
-            {
-                Console.WriteLine("Couldn't find -s argument");
-            }
-
             var warmupIndex = argsList.FindIndex(x => String.Equals(x, "-w", StringComparison.OrdinalIgnoreCase));
             if (warmupIndex >= 0)
             {
                 warmup = argsList[warmupIndex + 1];
                 argsList.RemoveAt(warmupIndex);
                 argsList.RemoveAt(warmupIndex);
+            }
+
+            string methods = string.Empty;
+            var methodsIndex = argsList.FindIndex(x => String.Equals(x, "-m", StringComparison.OrdinalIgnoreCase));
+            if (methodsIndex >= 0)
+            {
+                methods = argsList[methodsIndex + 1];
+                argsList.RemoveAt(methodsIndex);
+                argsList.RemoveAt(methodsIndex);
+            }
+
+            string queryPamater = string.Empty;
+            string query = string.Empty;
+
+            var queryIndex = argsList.FindIndex(x => String.Equals(x, "-q", StringComparison.OrdinalIgnoreCase));
+            if (queryIndex >= 0)
+            {
+                query = argsList[queryIndex + 1];
+                queryPamater = argsList[queryIndex + 2];
+                argsList.RemoveAt(queryIndex);
+                argsList.RemoveAt(queryIndex);
+                argsList.RemoveAt(queryIndex);
+            }
+
+            List<string> bodyPamaterArray = new List<string>();
+
+            var bodyIndex = argsList.FindIndex(x => String.Equals(x, "-q", StringComparison.OrdinalIgnoreCase));
+            if (bodyIndex >= 0)
+            {
+                int bodyLength = Convert.ToInt32(argsList[bodyIndex + 1]);
+                argsList.RemoveAt(bodyIndex);
+                argsList.RemoveAt(bodyIndex);
+
+                for (int i = 0; i < bodyLength; i++)
+                {
+                    bodyPamaterArray.Add(argsList[bodyIndex]);
+                    argsList.RemoveAt(bodyIndex);
+                }
             }
 
             args = argsList.Select(Quote).ToArray();
@@ -133,13 +183,16 @@ namespace Microsoft.Crank.Jobs.Wrk2
 
             // Warmup
 
+            string scriptQueryParam = GetQueryParam(query, queryPamater);
+            string scriptBodyParam = GetBodyParam(bodyPamaterArray);
+
             if (!string.IsNullOrEmpty(warmup) && warmup != "0s")
             {
                 string arguments = $" -d {warmup} {baseArguments}";
 
-                arguments += GetScripts(scriptFilename, scriptParam);
+                arguments += fullScript;
 
-                arguments += GetParams(param1, param2);
+                arguments += GetScriptParams(scriptArchiveUrl, scriptParam, methods, scriptQueryParam, scriptBodyParam);
 
                 Console.WriteLine("预热：" + arguments);
 
@@ -163,9 +216,9 @@ namespace Microsoft.Crank.Jobs.Wrk2
 
             string trueArguments = $" -d {duration} {baseArguments}";
 
-            trueArguments += GetScripts(scriptFilename, scriptParam);
+            trueArguments += fullScript;
 
-            trueArguments += GetParams(param1, param2);
+            trueArguments += GetScriptParams(scriptArchiveUrl, scriptParam, methods, scriptQueryParam, scriptBodyParam);
 
             Console.WriteLine("执行：" + trueArguments);
 
@@ -442,7 +495,7 @@ namespace Microsoft.Crank.Jobs.Wrk2
             }
         }
 
-        public static async Task MeasureFirstRequest(string[] args)
+        private static async Task MeasureFirstRequest(string[] args)
         {
             var url = args.FirstOrDefault(arg => arg.StartsWith("http", StringComparison.OrdinalIgnoreCase));
 
@@ -484,27 +537,53 @@ namespace Microsoft.Crank.Jobs.Wrk2
             }
         }
 
-        public static string GetScripts(string scriptFilename, string scriptParam)
+        private static string GetScripts(string script, string scriptFileName = "")
         {
-            if (!string.IsNullOrWhiteSpace(scriptParam))
-                return $" --script ./{scriptFilename}/{scriptParam}";
-            return "";
+            if (string.IsNullOrEmpty(script))
+                return string.Empty;
+
+            if (string.IsNullOrEmpty(scriptFileName))
+                return $" --script ./{script}";
+
+            return $" --script ./{scriptFileName}/{script}";
         }
 
-        public static string GetParams(string param1, string param2)
+        private static string GetQueryParam(string query, string queryPamater)
         {
-            if (param1.Length > 0)
-            {
-                var list = param2.Split("||").Select(x => $"'{x}'").ToList();
-                StringBuilder stringBuilder1 = new StringBuilder();
-                foreach (var item in list)
-                {
-                    stringBuilder1.Append(item + " ");
-                }
+            if (string.IsNullOrEmpty(queryPamater))
+                return string.Empty;
 
-                return $" -- 0 '{param1}' {stringBuilder1.ToString()} ";
+            StringBuilder stringBuilder = new StringBuilder();
+            foreach (var item in queryPamater.Split("||"))
+            {
+                if (string.IsNullOrEmpty(item))
+                {
+                    continue;
+                }
+                var index = 1;
+                foreach (var value in item.Split('|'))
+                {
+                    stringBuilder.Append(query.Replace($"{index}", value));
+                    index++;
+                }
+                if (index > 1)
+                {
+                    stringBuilder.Append("|||");
+                }
             }
-            return "";
+            return stringBuilder.ToString();
+        }
+
+        private static string GetBodyParam(List<string> bodyArray)
+            => string.Join("|||", bodyArray);
+
+        private static string GetScriptParams(string scriptArchiveUrl, string script, string methods, string queryParam, string bodyParam)
+        {
+            if (scriptArchiveUrl.Equals(DefaultWrk2ScriptUrl, StringComparison.OrdinalIgnoreCase) && script.Equals("request.lua", StringComparison.OrdinalIgnoreCase))
+            {
+                return $" -- '{methods}' '{queryParam}' '{bodyParam}'";
+            }
+            return $" -- '{queryParam}' '{bodyParam}'";
         }
 
         public static async Task<string> DownloadWrk2Async()
@@ -543,20 +622,13 @@ namespace Microsoft.Crank.Jobs.Wrk2
             return wrk2Filename;
         }
 
-        public static async Task<string> DownloadWrk2Scripts()
+        public static string DownloadWrk2Scripts(string scriptArchiveUrl)
         {
-            var scriptFileName = Path.GetFileName(Wrk2ScriptUrl);
-            // Search for cached file
-            var cacheFolder = Path.Combine(Path.GetTempPath(), ".benchmarks");
+            var scriptFileName = Path.GetFileName(scriptArchiveUrl);
 
             var baseDirectory = System.AppDomain.CurrentDomain.BaseDirectory;
 
-            if (!Directory.Exists(cacheFolder))
-            {
-                Directory.CreateDirectory(cacheFolder);
-            }
-
-            Execute("wget", $"-P {baseDirectory} {Wrk2ScriptUrl}");
+            Execute("wget", $"-P {baseDirectory} {scriptArchiveUrl}");
 
             Console.WriteLine($"工作目录：{baseDirectory}");
 
