@@ -1,17 +1,17 @@
 local util = require("./scripts/common/util")
 local oAuth = require("./scripts/common/oauth")
 
-queryPath = nil -- ´æ´¢ÇëÇóµÄÇëÇó½Ó¿ÚµØÖ·£¬²»°üº¬²ÎÊı
+queryPath = nil -- å­˜å‚¨è¯·æ±‚çš„è¯·æ±‚æ¥å£åœ°å€ï¼Œä¸åŒ…å«å‚æ•°
 methods = 'GET'
 token = nil
 queryParamArray = nil
 bodyArray = nil
 
 function init(args)
-    -- ¸ñÊ½: 
-    -- ²ÎÊı1: Request Methods 
-    -- ²ÎÊı2: QueryParam ¸ñÊ½£º/get?id=1|||/get?id=2
-    -- ²ÎÊı3: BodyArray ¸ñÊ½£º{"Id":3,"Name":"Jim"}|||{"Id":4,"Name":"Jerry"}
+    -- æ ¼å¼: 
+    -- å‚æ•°1: Request Methods 
+    -- å‚æ•°2: QueryParam æ ¼å¼ï¼š/get?id=1|||/get?id=2
+    -- å‚æ•°3: BodyArray æ ¼å¼ï¼š{"Id":3,"Name":"Jim"}|||{"Id":4,"Name":"Jerry"}
 
     print('wrk init')
 

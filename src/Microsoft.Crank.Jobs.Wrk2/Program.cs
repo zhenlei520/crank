@@ -23,11 +23,11 @@ namespace Microsoft.Crank.Jobs.Wrk2
     {
         const string Wrk2Url = "https://aspnetbenchmarks.blob.core.windows.net/tools/wrk2";
 
-        const string DefaultWrk2ScriptUrl = "https://gitee.com/zhenlei520/crank/raw/sample/src/Microsoft.Crank.Jobs.Wrk2/scripts.tar.gz";
+        const string DefaultWrk2ScriptUrl = "https://gitee.com/zhenlei520/crank/raw/sample/src/Microsoft.Crank.Jobs.Wrk2/scripts.tar";
 
         static async Task<int> Main(string[] args)
         {
-            Console.WriteLine($"Wrk2 Client args: {string.Join(',', args)}");
+            Console.WriteLine($"Wrk2 Client args: {string.Join(' ', args)}");
 
             if (Environment.OSVersion.Platform != PlatformID.Unix ||
                 RuntimeInformation.ProcessArchitecture != Architecture.X64)
