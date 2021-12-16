@@ -151,7 +151,8 @@ namespace Microsoft.Crank.Jobs.Wrk2
 
                 for (int i = 0; i < bodyLength; i++)
                 {
-                    bodyPamaterArray.Add(argsList[bodyIndex]);
+                    string body = argsList[bodyIndex];
+                    bodyPamaterArray.Add(body.Replace("\"", "\\\""));//转义"
                     argsList.RemoveAt(bodyIndex);
                 }
             }

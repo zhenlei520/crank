@@ -28,5 +28,3 @@ profiles:
     variables: 
       serverQueryString: ?id={1}
       serverQueryParameter: 1||2 # 随机请求/get?id=1、/get?id=2
-      serviceBodyArray: ['{\"Id\":3,\"Name\":\"Jim\"}']
-      serviceBodyLength: 1
