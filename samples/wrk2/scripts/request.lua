@@ -23,11 +23,11 @@ function init(args)
 
     if util.length(args) > 0 then
         util.forEach(args, function(i, v)
-            print('i: ' .. i .. ' v: ' .. v)
+            -- print('i: ' .. i .. ' v: ' .. v)
 
             local temp = util.replace(v, '\'', '')
             if i == 1 then
-                print('request methods: ' .. temp)
+                -- print('request methods: ' .. temp)
                 methods = temp
             elseif i == 2 then
                 queryParamArray = util.split(temp, '|||')
@@ -66,6 +66,6 @@ response = function(status, headers, body)
         wrk.headers["Content-Type"] = 'application/json'
         wrk.headers["Authorization"] = 'Bearer ' .. token
     else
-        print('status: ' .. status .. ' body: ' .. body)
+        -- print('status: ' .. status .. ' body: ' .. body)
     end
 end
