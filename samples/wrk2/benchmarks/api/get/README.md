@@ -8,6 +8,7 @@ benchmarks
 └─ load.benchmarks.yml       yml配置
 └─ load.local.bat            测试本地环境时要执行的脚本、格式：load.{环境}.bat
 └─ README.md                 帮助文档
+└─ result.json               压测结果
 ```
 
 

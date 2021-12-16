@@ -1,0 +1,90 @@
+{
+  "returnCode": 0,
+  "jobResults": {
+    "jobs": {
+      "load": {
+        "results": {
+          "netSdkVersion": "5.0.404",
+          "aspNetCoreVersion": "5.0.13+55738ff",
+          "netCoreAppVersion": "5.0.13+b3afe99",
+          "benchmarks/build-time": 3193.0,
+          "benchmarks/published-size": 74276.0,
+          "benchmarks/start-time": 0.0,
+          "http/firstrequest": 85.0,
+          "wrk2/latency/mean": 1.81,
+          "wrk2/latency/max": 1.81,
+          "wrk2/requests": 2.0,
+          "wrk2/errors/badresponses": 0.0,
+          "wrk2/errors/socketerrors": 0.0,
+          "wrk2/latency/50": 1.81,
+          "wrk2/latency/75": 1.81,
+          "wrk2/latency/90": 1.81,
+          "wrk2/latency/99": 1.81,
+          "wrk2/latency/99.9": 1.81,
+          "wrk2/latency/99.99": 1.81,
+          "wrk2/latency/99.999": 1.81,
+          "wrk2/latency/distribution": [
+            [
+              {
+                "latency_us": 1.812,
+                "count": 1.0,
+                "percentile": 0.0
+              },
+              {
+                "latency_us": 1.812,
+                "count": 1.0,
+                "percentile": 1.0
+              }
+            ]
+          ],
+          "wrk2/rps/mean": 1.98,
+          "http/rps/mean": 1.98,
+          "http/latency/mean": 1.81,
+          "http/latency/max": 1.81,
+          "http/requests": 2.0,
+          "http/requests/badresponses": 0.0,
+          "http/requests/errors": 0.0,
+          "http/latency/50": 1.81,
+          "http/latency/75": 1.81,
+          "http/latency/90": 1.81,
+          "http/latency/99": 1.81,
+          "http/latency/99.9": 1.81,
+          "http/latency/99.99": 1.81,
+          "http/latency/99.999": 1.81
+        },
+        "metadata": [
+          
+        ],
+        "dependencies": [],
+        "measurements": [
+          [
+            {
+              "timestamp": "2021-12-16T18:51:08.3504137+08:00",
+              "name": "wrk2/latency/distribution",
+              "value": [
+                {
+                  "latency_us": 1.812,
+                  "count": 1.0,
+                  "percentile": 0.0
+                },
+                {
+                  "latency_us": 1.812,
+                  "count": 1.0,
+                  "percentile": 1.0
+                }
+              ]
+            }
+          ]
+        ],
+        "environment": {
+          "hw": "Unknown",
+          "env": "Unspecified",
+          "os": "Linux",
+          "arch": "X64",
+          "proc": 16
+        }
+      }
+    },
+    "properties": {}
+  }
+}
