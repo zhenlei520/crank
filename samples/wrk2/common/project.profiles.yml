@@ -9,4 +9,4 @@ profiles:
       connections: 32
       requests: 1
       warmup: 0
-      scriptArchive: https://gitee.com/zhenlei520/crank/blob/sample/src/Microsoft.Crank.Jobs.Wrk2/scripts.tar # script 压缩包路径，仅支持远程地址
+      scriptArchive: https://gitee.com/zhenlei520/crank/raw/sample/src/Microsoft.Crank.Jobs.Wrk2/scripts.tar.gz # script 压缩包路径，仅支持远程地址
