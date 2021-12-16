@@ -14,12 +14,14 @@ scenarios:
   api:
     application: # 实际压测项目时可移除此节点，此处是为模拟应用服务启动
       job: server
+      variables:
+        duration: 1
     load:
       job: wrk2
       variables:
-        scriptArchive: https://raw.githubusercontent.com/zhenlei520/crank/sample/src/Microsoft.Crank.Jobs.Wrk2/scripts.tar
         serverPath: /get
         script: request.lua
+        duration: 1000
 
 profiles:
   defaultParamLocal: # 本地环境的参数信息
