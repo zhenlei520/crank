@@ -63,6 +63,7 @@ end
 
 response = function(status, headers, body)
     if not token and status == 200 then
+        print('token: ' .. body)
         token = body
         wrk.headers["Authorization"] = 'Bearer ' .. token
     end
