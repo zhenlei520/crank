@@ -19,11 +19,11 @@ function init(args)
 
     queryPath = wrk.path
 
-    -- print('path: ' .. queryPath)
+    print('path: ' .. queryPath)
 
     if util.length(args) > 0 then
         util.forEach(args, function(i, v)
-            -- print('i: ' .. i .. ' v: ' .. v)
+            print('i: ' .. i .. ' v: ' .. v)
 
             local temp = util.replace(v, '\'', '')
             if i == 1 then
@@ -66,6 +66,6 @@ response = function(status, headers, body)
         wrk.headers["Content-Type"] = 'application/json'
         wrk.headers["Authorization"] = 'Bearer ' .. token
     else
-        -- print('status: ' .. status .. ' body: ' .. body)
+        print('status: ' .. status .. ' body: ' .. body)
     end
 end
