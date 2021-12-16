@@ -29,6 +29,7 @@ namespace hello.Controllers
                 throw new AuthenticationException("invalid token");
             }
 
+            Console.WriteLine($"add success: userName: {user.Name}");
             return $"add success: userName: {user.Name}";
         }
     }
