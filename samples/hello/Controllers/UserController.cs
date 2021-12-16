@@ -29,15 +29,7 @@ namespace hello.Controllers
                 throw new AuthenticationException("invalid token");
             }
 
-            var temp = list.FirstOrDefault(u => u.Id == user.Id);
-            if (temp == null)
-            {
-                list.Add(user);
-
-                return $"add success: userName: {user.Name}";
-            }
-
-            return $"add lose the user is exist";
+            return $"add success: userName: {user.Name}";
         }
     }
 
