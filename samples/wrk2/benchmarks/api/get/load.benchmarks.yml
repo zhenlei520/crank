@@ -26,5 +26,10 @@ scenarios:
 profiles:
   defaultParamLocal: # 本地环境的参数信息
     variables: 
+      connections: 1
+      threads: 1
+      requests: 1
+      duration: 1
+      rate: 1
       serverQueryString: ?id={1}
       serverQueryParameter: 1||2 # 随机请求/get?id=1、/get?id=2
