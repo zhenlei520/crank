@@ -19,9 +19,9 @@ scenarios:
     load:
       job: wrk2
       variables:
-        serverPath: /get
+        serverPath: /user/get
         script: request.lua
-        duration: 1000
+        duration: 1
 
 profiles:
   defaultParamLocal: # 本地环境的参数信息
